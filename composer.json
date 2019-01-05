@@ -1,0 +1,27 @@
+{
+    "name": "vuphuong87/omnipay-momo",
+    "description": "Momo Mobile Payment gateway for Omnipay payment processing library",
+    "keywords": [
+        "gateway",
+        "merchant",
+        "omnipay",
+        "momo"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Vu Phuong",
+            "email": "vuphuong87@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "omnipay/common": "^3.0",
+        "cakephp/chronos": "^1.1",
+        "php-http/guzzle6-adapter": "^1.1"
+    },
+    "autoload": {
+        "psr-4": { "Omnipay\\Momo\\" : "src/" }
+    }
+}
