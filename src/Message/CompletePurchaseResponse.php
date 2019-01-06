@@ -27,7 +27,7 @@ class CompletePurchaseResponse extends AbstractResponse
     {
         parent::__construct($request, $data);
 
-        $this->checkStatus($data);
+        $this->handleResponse($data);
     }
 
     public function isPending()
@@ -64,50 +64,7 @@ class CompletePurchaseResponse extends AbstractResponse
         return $this->message;
     }
 
-    private function checkStatus($data)
-    {
-        if (!isset($data['method'])) {
-            throw new InvalidResponseException('method data is not set');
-        }
-
-        if (strtolower($data['method']) == strtolower('get')) {
-            $this->handleGetResponse($data);
-        }
-
-        if (strtolower($data['method']) == strtolower('post')) {
-            $this->handlePostResponse($data);
-        }
-    }
-
-    private function handleGetResponse($data)
-    {
-        if (strtoupper($data['checksum']) != strtoupper($data['computed_checksum'])) {
-            $this->message = 'The signatures do not match';
-            $this->responseStatus = self::RESPONSE_STATUS_FAIL;
-            return;
-        }
-
-        switch ($data['status']) {
-            case self::STATUS_CANCEL:
-                $this->responseStatus = self::RESPONSE_STATUS_CANCEL;
-                $this->message = 'Payment is cancelled';
-                break;
-            case self::STATUS_FAIL:
-                $this->responseStatus = self::RESPONSE_STATUS_FAIL;
-                $this->message = 'Payment is failed';
-                break;
-            case self::STATUS_SUCCESS:
-                $this->responseStatus = self::RESPONSE_STATUS_SUCCESS;
-                $this->message = 'Payment is complete';
-                break;
-            default:
-                throw new InvalidResponseException('invalid status code: ' . $data['status']);
-                break;
-        }
-
-    }
-
-    private function handlePostResponse($data)
+    private function handleResponse($data)
     {
 
         if (strtoupper($data['signature']) != strtoupper($data['computed_checksum'])) {
@@ -116,18 +73,14 @@ class CompletePurchaseResponse extends AbstractResponse
             return;
         }
 
-        switch ($data['state']) {
-            case self::STATE_PAYMENT_PROCESSING:
-                $this->responseStatus = self::RESPONSE_STATUS_PENDING;
-                $this->message = 'The payment is still in process and it doesn\'t have the final result';
-                break;
-            case self::STATE_PAYMENT_RECEIVED:
-                $this->responseStatus = self::RESPONSE_STATUS_SUCCESS;
-                $this->message = 'Partner order has been paid.';
-                break;
-            default:
-                throw new InvalidResponseException('invalid state string: ' . $data['state']);
-                break;
+        if ($data['state'] == 0) { // errorCode = 0 => SUCCESS
+            $this->responseStatus = self::RESPONSE_STATUS_SUCCESS;
+            $this->message = 'Partner order has been paid.';
+        }
+        else {
+            $this->responseStatus = self::RESPONSE_STATUS_FAIL;
+            $this->message = 'Unspecified issue occurred';
+            return;
         }
     }
 }
