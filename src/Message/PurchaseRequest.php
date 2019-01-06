@@ -2,25 +2,23 @@
 
 namespace Omnipay\Momo\Message;
 
-
 use Cake\Chronos\Chronos;
 use Omnipay\Common\Exception\InvalidRequestException;
 
 class PurchaseRequest extends AbstractRequest
 {
-    const RULE_DES_MIN_LENGTH = 50;
-
     const TIME_ZONE = 'Asia/Ho_Chi_Minh';
+    private $endPointProduction = 'https://payment.momo.vn';
+    private $endPointSandbox = 'https://test-payment.momo.vn';
 
     public function getData()
     {
         $this->validate(
             'partnerCode',
             'accessKey',
-            'requestId',
             'amount',
-            'orderId',
-            'orderInfo',
+            'transactionId', // orderId
+            'description', // orderInfo
             'returnUrl',
             'notifyUrl'
         );
@@ -30,7 +28,10 @@ class PurchaseRequest extends AbstractRequest
         $secretKey = $this->getSecretKey();
 
         $order['requestType'] = 'captureMoMoWallet';
-        $order['signature'] = hash_hmac('sha256', http_build_query($order), $secretKey);
+
+        $rawHash = "partnerCode=". $order['partnerCode'] ."&accessKey=". $order['accessKey'] ."&requestId=". $order['requestId'] ."&amount=". $order['amount'] ."&orderId=". $order['orderId'] ."&orderInfo=". $order['orderInfo'] ."&returnUrl=". $order['returnUrl'] ."&notifyUrl=". $order['notifyUrl'] ."&extraData=". $order['extraData'];
+
+        $order['signature'] = hash_hmac('sha256', $rawHash, $secretKey);
 
         return [
             'order' => $order
@@ -39,7 +40,17 @@ class PurchaseRequest extends AbstractRequest
 
     public function sendData($data)
     {
-        return new PurchaseResponse($this, $data);
+        $endpoint = $this->endPointProduction;
+        if ($this->getTestMode())
+            $endpoint = $this->endPointSandbox;
+
+        $order = $data['order'];
+
+        $body     = json_encode($order);
+        $response = $this->httpClient->request('POST', $endpoint . '/gw_payment/transactionProcessor', [], $body)->getBody();
+        $result  = json_decode($response, true);
+
+        return $this->response = new PurchaseResponse($this, $result);
     }
 
     protected function buildOrder()
@@ -51,12 +62,13 @@ class PurchaseRequest extends AbstractRequest
         return [
             'partnerCode' => $this->getPartnerCode(),
             'accessKey' => $this->getAccessKey(),
-            'requestId' => time(),
-            'amount' => $this->getAmountInteger(),
+            'requestId' => (string)time(),
+            'amount' => $this->getAmount(),
             'orderId' => $this->getTransactionId(),
             'orderInfo' => $this->getDescription(),
             'returnUrl' => $this->getReturnUrl(),
-            'notifyUrl' => $this->getNotifyUrl()
+            'notifyUrl' => $this->getNotifyUrl(),
+            'extraData' => ''
         ];
     }
 }

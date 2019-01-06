@@ -7,12 +7,10 @@ use Omnipay\Common\Message\AbstractResponse;
 
 class PurchaseResponse extends AbstractResponse
 {
-    private $endPointProduction = 'https://payment.momo.vn';
-    private $endPointSandbox = 'https://test-payment.momo.vn';
-
     public function isSuccessful()
     {
-        return false;
+        $data = $this->getData();
+        return isset($data['errorCode']) && $data['errorCode'] == 0 ? true : false;
     }
 
     public function isPending()
@@ -32,21 +30,21 @@ class PurchaseResponse extends AbstractResponse
 
     public function getRedirectMethod()
     {
-        return 'POST';
+        return 'GET';
     }
 
     public function getRedirectUrl()
     {
-        if ($this->request->getTestMode()) {
-            return $this->endPointSandbox;
+        if ($this->isSuccessful()) {
+            $data = $this->getData();
+            return $data['payUrl'];
+        } else {
+            return NULL;
         }
-
-        return $this->endPointProduction;
     }
 
     public function getRedirectData()
     {
         return $this->data;
     }
-
 }
