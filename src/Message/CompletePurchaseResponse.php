@@ -45,6 +45,12 @@ class CompletePurchaseResponse extends AbstractResponse
         return $this->responseStatus == self::RESPONSE_STATUS_CANCEL;
     }
 
+    public function isSignatureVerified($data) {
+        if (strtoupper($data['signature']) != strtoupper($data['computed_checksum']))
+            return false;
+        return true;
+    }
+
     public function getTransactionId()
     {
         if (!$this->isSuccessful()) {
@@ -66,8 +72,7 @@ class CompletePurchaseResponse extends AbstractResponse
 
     private function handleResponse($data)
     {
-
-        if (strtoupper($data['signature']) != strtoupper($data['computed_checksum'])) {
+        if ($this->isSignatureVerified($data) == false) {
             $this->message = 'The signatures do not match';
             $this->responseStatus = self::RESPONSE_STATUS_FAIL;
             return;
